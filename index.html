@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prompt Library</title>
+<meta name="description" content="Kelola dan gunakan kembali prompt AI - kategori, koleksi, variabel dinamis, dan riwayat versi.">
+<meta name="theme-color" content="#4F63F6">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prompts">
+<style>
+:root{
+  --bg:#F7F8FA; --surface:#FFFFFF; --bg-soft:#F1F3F6; --border:#E5E8EC;
+  --text:#1A1D23; --text-secondary:#6B7280; --accent:#4F63F6; --accent-soft:#EEF0FE;
+  --success:#16A34A; --success-soft:#E9F9EF; --warning:#D97706; --warning-soft:#FDF3E4;
+  --danger:#DC2626; --danger-soft:#FDEBEB; --purple:#8B5CF6; --purple-soft:#F2EDFE;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px;
+  --shadow-card:0 1px 2px rgba(20,20,30,.04), 0 1px 8px rgba(20,20,30,.04);
+  --shadow-pop:0 12px 40px rgba(20,20,30,.16);
+}
+body.dark{
+  --bg:#14161C; --surface:#1C1F27; --bg-soft:#22252E; --border:#2C303B;
+  --text:#EDEFF3; --text-secondary:#8B93A3; --accent:#6B7CF9; --accent-soft:#242A4A;
+  --success:#34D399; --success-soft:#123024; --warning:#FBBF24; --warning-soft:#332708;
+  --danger:#F87171; --danger-soft:#3A1E1E; --purple:#A78BFA; --purple-soft:#291F49;
+  --shadow-card:0 1px 2px rgba(0,0,0,.3), 0 1px 8px rgba(0,0,0,.25);
+  --shadow-pop:0 12px 40px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+  font-size:14px; -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font-family:inherit;color:inherit;}
+button{cursor:pointer;}
+a{color:inherit;text-decoration:none;}
+svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+
+/* ---------- App shell ---------- */
+#app{display:flex;height:100vh;overflow:hidden;}
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  width:264px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:18px 14px;overflow-y:auto;transition:margin-left .2s ease;
+}
+.sidebar.collapsed{margin-left:-264px;}
+.brand-row{display:flex;align-items:center;gap:10px;padding:4px 6px 18px 6px;}
+.brand-logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0;}
+.brand-name{font-weight:800;font-size:15.5px;flex:1;}
+.sidebar-collapse-btn{background:none;border:none;color:var(--text-secondary);padding:6px;border-radius:8px;display:flex;}
+.sidebar-collapse-btn:hover{background:var(--bg-soft);}
+
+.nav-section{margin-bottom:6px;}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:9px;font-size:13.5px;font-weight:600;
+  color:var(--text-secondary);border:none;background:none;width:100%;text-align:left;margin-bottom:2px;
+}
+.nav-item:hover{background:var(--bg-soft);color:var(--text);}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);}
+.nav-item svg{width:17px;height:17px;}
+.nav-item .nav-count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--text-secondary);background:var(--bg-soft);padding:1px 7px;border-radius:999px;}
+.nav-item.active .nav-count{color:var(--accent);background:var(--surface);}
+
+.sidebar-heading{
+  display:flex;align-items:center;justify-content:space-between;padding:16px 10px 6px 10px;
+  font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--text-secondary);text-transform:uppercase;
+}
+.sidebar-heading button{background:none;border:none;color:var(--text-secondary);padding:2px;border-radius:6px;display:flex;}
+.sidebar-heading button:hover{background:var(--bg-soft);color:var(--text);}
+.cat-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:13.5px;color:var(--text);border:none;background:none;width:100%;text-align:left;}
+.cat-item:hover{background:var(--bg-soft);}
+.cat-item.active{background:var(--accent-soft);color:var(--accent);font-weight:700;}
+.cat-item .cat-emoji{font-size:15px;width:20px;text-align:center;}
+.cat-item .cat-count{margin-left:auto;font-size:11.5px;color:var(--text-secondary);}
+.cat-item-row{position:relative;}
+.cat-item-row .cat-del{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:none;background:none;border:none;color:var(--text-secondary);padding:3px;border-radius:6px;}
+.cat-item-row:hover .cat-del{display:flex;}
+.cat-item-row .cat-del:hover{background:var(--danger-soft);color:var(--danger);}
+.cat-item-row .cat-del svg{width:13px;height:13px;}
+
+.sidebar-bottom{margin-top:auto;padding-top:10px;border-top:1px solid var(--border);}
+
+/* ---------- Topbar ---------- */
+.main-col{flex:1;display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden;}
+.topbar{
+  display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;
+}
+.hamburger-btn{display:none;background:none;border:none;color:var(--text);padding:4px;}
+.search-wrap{flex:1;position:relative;max-width:520px;}
+.search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-secondary);}
+.search-wrap input{
+  width:100%;padding:9px 14px 9px 38px;border-radius:10px;border:1px solid var(--border);background:var(--bg-soft);
+  font-size:13.5px;outline:none;color:var(--text);
+}
+.search-wrap input:focus{border-color:var(--accent);background:var(--surface);}
+.search-kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10.5px;color:var(--text-secondary);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 5px;}
+.topbar-spacer{flex:1;}
+.icon-btn{background:none;border:1px solid transparent;color:var(--text-secondary);padding:8px;border-radius:9px;display:flex;}
+.icon-btn:hover{background:var(--bg-soft);color:var(--text);}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:10px;font-size:13.5px;font-weight:700;border:none;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{filter:brightness(1.06);}
+.btn-secondary{background:var(--bg-soft);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{background:var(--border);}
+.btn-ghost{background:none;color:var(--text-secondary);}
+.btn-ghost:hover{background:var(--bg-soft);}
+.btn-danger{background:var(--danger-soft);color:var(--danger);}
+.btn-danger:hover{filter:brightness(0.95);}
+.btn-sm{padding:6px 11px;font-size:12.5px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+
+/* ---------- Filter row ---------- */
+.filter-row{display:flex;align-items:center;gap:9px;padding:14px 22px 0 22px;flex-wrap:wrap;flex-shrink:0;}
+.filter-select{
+  padding:8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;
+  color:var(--text);outline:none;
+}
+.view-toggle{display:flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-left:auto;}
+.view-toggle button{background:var(--surface);border:none;padding:7px 10px;color:var(--text-secondary);}
+.view-toggle button.active{background:var(--accent-soft);color:var(--accent);}
+
+/* ---------- Content ---------- */
+.content-scroll{flex:1;overflow-y:auto;padding:16px 22px 32px 22px;}
+.content-heading{display:flex;align-items:baseline;gap:8px;margin:6px 0 14px 0;}
+.content-heading h2{font-size:18px;margin:0;}
+.content-heading span{color:var(--text-secondary);font-size:13px;}
+
+.prompt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+.prompt-list{display:flex;flex-direction:column;gap:8px;}
+
+.prompt-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;cursor:pointer;
+  box-shadow:var(--shadow-card);transition:transform .12s ease, box-shadow .12s ease;display:flex;flex-direction:column;
+}
+.prompt-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(20,20,30,.10);}
+.prompt-thumb{height:108px;display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;flex-shrink:0;}
+.prompt-fav-btn{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.85);border:none;border-radius:8px;padding:5px;display:flex;color:#C9CDD4;}
+body.dark .prompt-fav-btn{background:rgba(20,20,20,.6);}
+.prompt-fav-btn.active,.prompt-fav-btn:hover{color:#F5B400;}
+.prompt-fav-btn svg{width:15px;height:15px;}
+.prompt-body{padding:12px 14px 14px 14px;display:flex;flex-direction:column;gap:7px;flex:1;}
+.prompt-title{font-size:14px;font-weight:700;line-height:1.3;}
+.model-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.model-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;}
+.prompt-desc{font-size:12px;color:var(--text-secondary);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1;}
+.hashtags{display:flex;gap:5px;flex-wrap:wrap;}
+.hashtag{font-size:11px;color:var(--accent);background:var(--accent-soft);padding:1px 7px;border-radius:6px;}
+.prompt-footer{display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border);margin-top:2px;}
+.prompt-footer .edited{font-size:11px;color:var(--text-secondary);}
+.prompt-footer .footer-actions{display:flex;gap:2px;}
+.prompt-footer .footer-actions button{background:none;border:none;color:var(--text-secondary);padding:5px;border-radius:7px;}
+.prompt-footer .footer-actions button:hover{background:var(--bg-soft);color:var(--text);}
+.prompt-footer .footer-actions svg{width:14px;height:14px;}
+
+.prompt-row{
+  display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:11px 14px;cursor:pointer;box-shadow:var(--shadow-card);
+}
+.prompt-row:hover{background:var(--bg-soft);}
+.prompt-row .prompt-thumb{width:44px;height:44px;border-radius:9px;font-size:20px;flex-shrink:0;}
+.prompt-row .row-main{flex:1;min-width:0;}
+.prompt-row .row-title{font-weight:700;font-size:13.5px;}
+.prompt-row .row-sub{font-size:11.5px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prompt-row .row-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 20px;color:var(--text-secondary);text-align:center;gap:8px;}
+.empty-state svg{width:44px;height:44px;opacity:.4;margin-bottom:6px;}
+.empty-state h3{margin:0;color:var(--text);font-size:15px;}
+.empty-state p{margin:0;font-size:13px;max-width:280px;}
+
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:24px;}
+.pagination button{
+  min-width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12.5px;font-weight:600;
+}
+.pagination button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.pagination button:disabled{opacity:.4;}
+
+/* ---------- Detail panel ---------- */
+.detail-overlay{position:fixed;inset:0;background:rgba(15,17,22,.35);z-index:80;display:none;}
+.detail-overlay.show{display:block;}
+.detail-panel{
+  position:fixed;top:0;right:0;height:100vh;width:480px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);
+  box-shadow:var(--shadow-pop);z-index:90;transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;
+}
+.detail-panel.show{transform:translateX(0);}
+.detail-head{display:flex;align-items:flex-start;gap:10px;padding:18px 20px 12px 20px;border-bottom:1px solid var(--border);}
+.detail-head-main{flex:1;min-width:0;}
+.detail-head h3{margin:0 0 6px 0;font-size:17px;}
+.detail-scroll{flex:1;overflow-y:auto;padding:16px 20px 32px 20px;}
+.detail-tabs{display:flex;gap:4px;padding:0 20px;border-bottom:1px solid var(--border);}
+.detail-tab{padding:10px 4px;font-size:13px;font-weight:700;color:var(--text-secondary);border:none;background:none;border-bottom:2px solid transparent;margin-right:16px;}
+.detail-tab.active{color:var(--accent);border-color:var(--accent);}
+.section-label{font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:8px;}
+.editor-box{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg-soft);overflow:hidden;margin-bottom:18px;}
+.editor-lines{display:flex;font-family:"SF Mono",Consolas,Menlo,monospace;font-size:12.5px;line-height:1.7;}
+.editor-linenum{padding:12px 10px;color:var(--text-secondary);text-align:right;user-select:none;background:var(--bg-soft);border-right:1px solid var(--border);white-space:pre;}
+.editor-text{flex:1;padding:12px 12px;border:none;background:none;resize:vertical;outline:none;color:var(--text);min-height:140px;width:100%;}
+.editor-text .var-token{color:var(--accent);font-weight:700;}
+.var-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.var-field{border:1px solid var(--border);border-radius:9px;padding:8px 10px;background:var(--surface);}
+.var-field label{display:block;font-size:10px;font-weight:800;letter-spacing:.4px;color:var(--text-secondary);margin-bottom:3px;}
+.var-field input{border:none;background:none;width:100%;font-size:13px;font-weight:600;outline:none;color:var(--text);padding:0;}
+.detail-actions{display:flex;gap:9px;margin-bottom:20px;}
+.stat-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.stat-mini{border:1px solid var(--border);border-radius:9px;padding:10px 12px;background:var(--bg-soft);}
+.stat-mini .stat-mini-label{font-size:10.5px;color:var(--text-secondary);font-weight:700;margin-bottom:3px;}
+.stat-mini .stat-mini-value{font-size:17px;font-weight:800;}
+.models-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.model-badge{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
+.complexity-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;}
+
+/* ---------- Modal ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,17,22,.4);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-pop);}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);}
+.modal-head h3{margin:0;font-size:16px;}
+.modal-body{padding:18px 22px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:9px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:12.5px;font-weight:700;color:var(--text-secondary);}
+.field input,.field select,.field textarea{
+  padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13.5px;outline:none;background:var(--bg-soft);color:var(--text);width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);background:var(--surface);}
+.field textarea{min-height:110px;resize:vertical;font-family:inherit;}
+.chip-group{display:flex;gap:7px;flex-wrap:wrap;}
+.chip{padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg-soft);font-size:12.5px;font-weight:700;color:var(--text-secondary);}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.emoji-grid{display:flex;gap:6px;flex-wrap:wrap;}
+.emoji-opt{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--bg-soft);font-size:17px;display:flex;align-items:center;justify-content:center;}
+.emoji-opt.active{border-color:var(--accent);background:var(--accent-soft);}
+
+/* ---------- Toast ---------- */
+#toastRoot{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{background:#1c2333;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.22);display:flex;align-items:center;gap:8px;}
+
+/* ---------- Mobile ---------- */
+.mobile-backdrop{position:fixed;inset:0;background:rgba(15,17,22,.4);z-index:70;display:none;}
+.mobile-backdrop.show{display:block;}
+
+@media (max-width:860px){
+  .sidebar{position:fixed;top:0;left:0;z-index:75;transform:translateX(-100%);transition:transform .2s ease;margin-left:0;box-shadow:var(--shadow-pop);}
+  .sidebar.mobile-open{transform:translateX(0);}
+  .hamburger-btn{display:flex;}
+  .detail-panel{width:100%;}
+  .search-kbd{display:none;}
+  .filter-row{padding:12px 14px 0 14px;}
+  .content-scroll{padding:14px 14px 28px 14px;}
+  .topbar{padding:12px 14px;}
+  .prompt-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+  .var-grid{grid-template-columns:1fr;}
+  .stat-mini-grid{grid-template-columns:1fr 1fr;}
+}
+
+/* ---------- Auth ---------- */
+.auth-screen{position:fixed;inset:0;z-index:150;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-pop);padding:36px 32px;max-width:360px;width:100%;text-align:center;}
+.auth-card .brand-logo{margin:0 auto 16px auto;}
+.auth-card h2{margin:0 0 6px 0;font-size:19px;}
+.auth-card p{margin:0 0 22px 0;font-size:13px;color:var(--text-secondary);line-height:1.5;}
+.btn-google{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 16px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-weight:700;font-size:13.5px;color:var(--text);}
+.btn-google:hover{background:var(--bg-soft);}
+.btn-google:disabled{opacity:.6;cursor:not-allowed;}
+.auth-status{font-size:12px;color:var(--text-secondary);margin-top:14px;min-height:16px;}
+.user-badge{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border-radius:999px;background:var(--bg-soft);}
+.user-badge img{width:26px;height:26px;border-radius:50%;display:block;}
+.user-badge span{font-size:12.5px;font-weight:700;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+</style>
+</head>
+<body>
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="brand-logo">P</div>
+    <h2>Prompt Library</h2>
+    <p>Masuk dengan akun Google untuk menyimpan dan menyinkronkan prompt kamu secara online.</p>
+    <button class="btn-google" id="btnGoogleSignIn">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.6-.2-2.4H12v4.5h6.5c-.3 1.5-1.2 2.8-2.5 3.6v3h4C22.1 19 23.5 16 23.5 12.3z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-4-3c-1.1.8-2.5 1.2-4 1.2-3.1 0-5.7-2.1-6.6-4.9h-4.1v3.1C3.3 21.4 7.3 24 12 24z"/><path fill="#FBBC05" d="M5.4 14.4c-.2-.7-.4-1.5-.4-2.4s.1-1.6.4-2.4V6.5H1.3C.5 8.1 0 9.9 0 12s.5 3.9 1.3 5.5l4.1-3.1z"/><path fill="#EA4335" d="M12 4.8c1.7 0 3.3.6 4.5 1.7l3.4-3.4C17.9 1.2 15.2 0 12 0 7.3 0 3.3 2.6 1.3 6.5l4.1 3.1c.9-2.8 3.5-4.8 6.6-4.8z"/></svg>
+      <span>Masuk dengan Google</span>
+    </button>
+    <div class="auth-status" id="authStatus"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="mobile-backdrop" id="mobileBackdrop"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand-row">
+      <div class="brand-logo">P</div>
+      <div class="brand-name">Prompt Library</div>
+      <button class="sidebar-collapse-btn" id="btnCollapseSidebar" title="Sembunyikan sidebar"></button>
+    </div>
+    <div class="nav-section" id="navSection"></div>
+    <div class="sidebar-heading">
+      <span>Kategori</span>
+      <button id="btnAddCategory" title="Tambah kategori"></button>
+    </div>
+    <div id="categoryList"></div>
+    <div class="sidebar-heading">
+      <span>Koleksi</span>
+      <button id="btnAddCollection" title="Tambah koleksi"></button>
+    </div>
+    <div id="collectionList"></div>
+    <div class="sidebar-bottom">
+      <button class="nav-item" data-nav="settings"></button>
+      <button class="nav-item" data-nav="trash"></button>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <div class="topbar">
+      <button class="hamburger-btn icon-btn" id="btnHamburger"></button>
+      <button class="icon-btn" id="btnExpandSidebar" style="display:none" title="Tampilkan sidebar"></button>
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Cari prompt, tag, atau kata kunci...">
+        <span class="search-kbd">Ctrl K</span>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="user-badge" id="userBadge" style="display:none"></div>
+      <button class="icon-btn" id="btnLogout" title="Keluar" style="display:none"></button>
+      <button class="icon-btn" id="btnThemeToggle" title="Ganti tema"></button>
+      <button class="btn btn-primary" id="btnNewPrompt"></button>
+    </div>
+
+    <div class="filter-row">
+      <select class="filter-select" id="filterModel"><option value="">Semua Model</option></select>
+      <select class="filter-select" id="filterCategory"><option value="">Semua Kategori</option></select>
+      <select class="filter-select" id="filterStatus">
+        <option value="">Semua Status</option>
+        <option value="Draft">Draft</option>
+        <option value="Published">Published</option>
+        <option value="Archived">Archived</option>
+      </select>
+      <select class="filter-select" id="filterSort">
+        <option value="latest">Urut: Terbaru</option>
+        <option value="oldest">Urut: Terlama</option>
+        <option value="az">Urut: A-Z</option>
+        <option value="favorite">Urut: Favorit</option>
+      </select>
+      <div class="view-toggle">
+        <button id="btnViewGrid"></button>
+        <button id="btnViewList"></button>
+      </div>
+    </div>
+
+    <div class="content-scroll">
+      <div class="content-heading" id="contentHeading"></div>
+      <div id="promptListWrap"></div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel"></div>
+
+<div class="modal-overlay" id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
+
+<div id="toastRoot"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ================================================================
+   ICONS
+   ================================================================ */
+const ICONS = {
+  all: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`,
+  star: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2.5l2.9 6.4 6.9.7-5.2 4.7 1.5 6.9L12 17.8l-6.1 3.4 1.5-6.9-5.2-4.7 6.9-.7Z"/></svg>`,
+  starOutline: `<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.4 6.9.7-5.2 4.7 1.5 6.9L12 17.8l-6.1 3.4 1.5-6.9-5.2-4.7 6.9-.7Z"/></svg>`,
+  clock: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`,
+  chart: `<svg viewBox="0 0 24 24"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.9-1.5-2-3.4-2.3.6a7.6 7.6 0 0 0-2.6-1.5L14 2h-4l-.4 2.7a7.6 7.6 0 0 0-2.6 1.5l-2.3-.6-2 3.4L4.6 10.5a7.6 7.6 0 0 0 0 3L2.7 15l2 3.4 2.3-.6a7.6 7.6 0 0 0 2.6 1.5L10 22h4l.4-2.7a7.6 7.6 0 0 0 2.6-1.5l2.3.6 2-3.4Z"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>`,
+  search: `<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`,
+  sun: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/></svg>`,
+  moon: `<svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"/></svg>`,
+  grid: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`,
+  list: `<svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>`,
+  menu: `<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`,
+  collapse: `<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/><path d="M9 4v16"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`,
+  more: `<svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="18" r="1.3"/></svg>`,
+  close: `<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
+  edit: `<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
+  duplicate: `<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`,
+  restore: `<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>`,
+  play: `<svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5Z"/></svg>`,
+  folder: `<svg viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/></svg>`,
+  chevLeft: `<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>`,
+  chevRight: `<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`,
+};
+
+/* ================================================================
+   CONSTANTS: MODELS, CATEGORY COLORS, HELPERS
+   ================================================================ */
+const THEME_KEY   = 'promptLibrary.theme';
+
+const MODELS = [
+  {id:'gpt4',       name:'GPT-4',       color:'#10A37F'},
+  {id:'gpt35',      name:'GPT-3.5',     color:'#19C37D'},
+  {id:'claude',     name:'Claude',      color:'#D97757'},
+  {id:'gemini',     name:'Gemini',      color:'#4285F4'},
+  {id:'llama',      name:'Llama',       color:'#6366F1'},
+  {id:'mistral',    name:'Mistral',     color:'#F97316'},
+  {id:'midjourney', name:'Midjourney',  color:'#8B5CF6'},
+  {id:'other',      name:'Lainnya',     color:'#6B7280'},
+];
+function modelInfo(id){ return MODELS.find(m=>m.id===id) || MODELS[MODELS.length-1]; }
+
+const CAT_COLORS = ['#4F63F6','#16A34A','#D97706','#DC2626','#8B5CF6','#0EA5E9','#DB2777','#65A30D'];
+const EMOJI_OPTIONS = ['📄','🎨','💻','📣','💼','🏷️','☕','🚐','📱','🧩','📅','🖋️','💬','✨','🔥'];
+
+function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
+function esc(s){
+  if(s==null) return '';
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ================================================================
+   DEFAULT / SEED DATA
+   ================================================================ */
+function defaultCategories(){
+  return [
+    {id:'design',    name:'Desain & Print', emoji:'🎨'},
+    {id:'marketing', name:'Marketing',      emoji:'📣'},
+    {id:'business',  name:'Bisnis & Klien', emoji:'💼'},
+    {id:'coding',    name:'Coding',         emoji:'💻'},
+    {id:'branding',  name:'Branding',       emoji:'🏷️'},
+  ];
+}
+function defaultCollections(){
+  return [
+    {id:'pzgreen', name:'PZGREEN'},
+    {id:'fiverr',  name:'Fiverr Gig'},
+  ];
+}
+function seedPrompts(){
+  const now = Date.now();
+  const day = 86400000;
+  return [
+    {
+      id: uid('p'), title:'Background Produk Makanan – Dark Forest Green',
+      description:'Prompt AI image untuk background foto produk dengan elemen makanan melayang, palet hijau tua ala hutan.',
+      content:'Buatkan background fotografi produk untuk {{NAMA_PRODUK}} dengan palet warna dark forest green ({{HEX_WARNA}}). Tambahkan elemen {{ELEMEN_MELAYANG}} yang melayang secara halus di sekitar produk, pencahayaan studio lembut dari sisi kiri atas, suasana premium dan natural, gaya {{GAYA_VISUAL}}, resolusi tinggi, rasio 1:1.',
+      models:['gemini','midjourney'], categoryId:'design', collectionIds:['pzgreen'],
+      tags:['packaging','food','ai-image'], status:'Published', favorite:true, deleted:false,
+      createdAt:now-40*day, updatedAt:now-2*day,
+      versions:[{id:uid('v'),content:'Versi awal tanpa detail pencahayaan spesifik.',note:'Draft pertama',createdAt:now-40*day}],
+      notes:'Dipakai untuk brief PZGREEN batch 1. Klien suka hasil dengan daun tropis sebagai elemen melayang.',
+      emoji:'🎨', variables:{NAMA_PRODUK:'PZGREEN Snack Bar', HEX_WARNA:'#0F2E1E', ELEMEN_MELAYANG:'daun tropis dan biji-bijian', GAYA_VISUAL:'photorealistic editorial'}
+    },
+    {
+      id: uid('p'), title:'Brief Desain Wrap Kendaraan 3 Warna',
+      description:'Template brief desain vehicle wrap dengan spesifikasi Oracal 651 dan palet 3 warna.',
+      content:'Buatkan brief desain wrap kendaraan untuk klien {{NAMA_KLIEN}}. Kendaraan: {{JENIS_KENDARAAN}}. Gunakan palet {{JUMLAH_WARNA}} warna: {{DAFTAR_WARNA}}. Material vinyl: Oracal 651. Sertakan posisi logo, area cutting sticker, dan catatan DPI 100 untuk ukuran asli kendaraan.',
+      models:['claude','gpt4'], categoryId:'design', collectionIds:[],
+      tags:['vehicle-wrap','client-brief'], status:'Published', favorite:false, deleted:false,
+      createdAt:now-25*day, updatedAt:now-25*day,
+      versions:[], notes:'Dipakai untuk brief Kusuma Kitchen.',
+      emoji:'🚐', variables:{NAMA_KLIEN:'Kusuma Kitchen', JENIS_KENDARAAN:'mobil box', JUMLAH_WARNA:'3', DAFTAR_WARNA:'merah, putih, hitam'}
+    },
+    {
+      id: uid('p'), title:'Deskripsi Gig Fiverr – Vektorisasi',
+      description:'Prompt untuk generate deskripsi gig Fiverr jasa vektorisasi gambar yang menarik buyer internasional.',
+      content:'Tulis deskripsi gig Fiverr untuk jasa {{JENIS_JASA}}. Target buyer: {{TARGET_BUYER}}. Sertakan value proposition, proses kerja singkat, format output ({{FORMAT_OUTPUT}}), dan call-to-action. Gaya bahasa profesional namun ramah, maksimal {{JUMLAH_KATA}} kata.',
+      models:['gpt4','claude'], categoryId:'marketing', collectionIds:['fiverr'],
+      tags:['fiverr','copywriting'], status:'Draft', favorite:true, deleted:false,
+      createdAt:now-18*day, updatedAt:now-5*day,
+      versions:[], notes:'',
+      emoji:'📣', variables:{JENIS_JASA:'vektorisasi logo dan ilustrasi', TARGET_BUYER:'small business owner luar negeri', FORMAT_OUTPUT:'AI, EPS, SVG, PDF', JUMLAH_KATA:'200'}
+    },
+    {
+      id: uid('p'), title:'Brand Guideline Section – Tone of Voice',
+      description:'Menulis bagian tone of voice untuk brand guideline coffee shop.',
+      content:'Tulis bagian "Tone of Voice" untuk brand guideline {{NAMA_BRAND}}. Brand ini bergerak di bidang {{BIDANG_USAHA}} dengan target audiens {{TARGET_AUDIENS}}. Jelaskan 3 sifat kepribadian brand, contoh kalimat yang sesuai dan tidak sesuai, serta panduan penggunaan emoji/bahasa santai.',
+      models:['claude'], categoryId:'branding', collectionIds:[],
+      tags:['brand-guideline','coffee'], status:'Published', favorite:false, deleted:false,
+      createdAt:now-33*day, updatedAt:now-10*day,
+      versions:[], notes:'Untuk Maida Coffee.',
+      emoji:'☕', variables:{NAMA_BRAND:'Maida Coffee', BIDANG_USAHA:'kedai kopi lokal', TARGET_AUDIENS:'anak muda urban 20-35 tahun'}
+    },
+    {
+      id: uid('p'), title:'Caption Instagram Promo Cetak',
+      description:'Generate caption Instagram untuk promo layanan cetak dan cutting sticker.',
+      content:'Buatkan caption Instagram untuk promo {{JENIS_LAYANAN}} dari Martien Design. Sertakan hook di kalimat pertama, 1 emoji relevan, harga mulai {{HARGA_MULAI}}, dan CTA untuk DM/WA. Tambahkan 5 hashtag relevan untuk industri percetakan lokal.',
+      models:['gpt4'], categoryId:'marketing', collectionIds:[],
+      tags:['instagram','promo'], status:'Published', favorite:false, deleted:false,
+      createdAt:now-12*day, updatedAt:now-1*day,
+      versions:[], notes:'',
+      emoji:'📱', variables:{JENIS_LAYANAN:'cutting sticker custom', HARGA_MULAI:'Rp 25.000'}
+    },
+    {
+      id: uid('p'), title:'Prompt Perbaikan Vektorisasi Grunge/Splatter',
+      description:'Instruksi teknis membersihkan hasil vektorisasi artwork grunge dengan banyak path terbuka.',
+      content:'Berikan langkah-langkah untuk memperbaiki hasil vektorisasi artwork {{JENIS_ARTWORK}} dari tool {{NAMA_TOOL}} agar semua path tertutup (closed path dengan command Z), kompatibel CorelDRAW, tanpa fill-rule evenodd, dan siap untuk {{TUJUAN_AKHIR}}.',
+      models:['claude','gpt4'], categoryId:'coding', collectionIds:[],
+      tags:['vectorization','svg','coreldraw'], status:'Draft', favorite:false, deleted:false,
+      createdAt:now-6*day, updatedAt:now-6*day,
+      versions:[], notes:'Dipakai untuk troubleshooting VTracer.',
+      emoji:'🖋️', variables:{JENIS_ARTWORK:'grunge dan splatter kompleks', NAMA_TOOL:'VTracer', TUJUAN_AKHIR:'cutting sticker vinyl'}
+    },
+    {
+      id: uid('p'), title:'Pesan Onboarding Klien Baru',
+      description:'Template pesan WhatsApp untuk menyambut klien baru dan menjelaskan alur kerja.',
+      content:'Tulis pesan WhatsApp untuk menyambut klien baru {{NAMA_KLIEN}} yang memesan {{JENIS_PESANAN}}. Jelaskan alur kerja: brief → draft desain → revisi ({{JUMLAH_REVISI}}x) → file final → pembayaran ({{METODE_BAYAR}}). Gunakan bahasa santai tapi profesional.',
+      models:['gpt4'], categoryId:'business', collectionIds:[],
+      tags:['client-onboarding','whatsapp'], status:'Published', favorite:true, deleted:false,
+      createdAt:now-50*day, updatedAt:now-20*day,
+      versions:[], notes:'',
+      emoji:'💬', variables:{NAMA_KLIEN:'Bapak/Ibu', JENIS_PESANAN:'banner large format', JUMLAH_REVISI:'2', METODE_BAYAR:'DP 50% + pelunasan'}
+    },
+    {
+      id: uid('p'), title:'Ringkasan Jadwal Libur Lintas Negara',
+      description:'Menyusun ringkasan hari libur nasional untuk perencanaan pengiriman logistik lintas negara.',
+      content:'Buat ringkasan hari libur nasional tahun {{TAHUN}} untuk negara {{DAFTAR_NEGARA}} dalam format tabel: tanggal, nama libur, negara, potensi dampak ke jadwal pengiriman. Beri highlight tanggal yang bertepatan/berdekatan antar negara.',
+      models:['claude'], categoryId:'business', collectionIds:[],
+      tags:['logistik','holiday-calendar'], status:'Archived', favorite:false, deleted:false,
+      createdAt:now-70*day, updatedAt:now-45*day,
+      versions:[], notes:'Untuk klien logistik: Indonesia, Taiwan, Vietnam, China, Hong Kong.',
+      emoji:'📅', variables:{TAHUN:'2027', DAFTAR_NEGARA:'Indonesia, Taiwan, Vietnam, China, Hong Kong'}
+    },
+    {
+      id: uid('p'), title:'Ide Motif Pattern Seamless untuk Microstock',
+      description:'Brainstorm ide motif pattern seamless musiman untuk dijual di platform microstock.',
+      content:'Berikan 10 ide motif pattern seamless untuk tema {{TEMA_MUSIM}}, cocok untuk kategori {{KATEGORI_PRODUK}} di platform microstock. Sertakan palet warna singkat dan gaya visual (flat/hand-drawn/watercolor) untuk tiap ide.',
+      models:['gpt4','midjourney'], categoryId:'design', collectionIds:[],
+      tags:['microstock','pattern'], status:'Draft', favorite:false, deleted:false,
+      createdAt:now-3*day, updatedAt:now-3*day,
+      versions:[], notes:'',
+      emoji:'🧩', variables:{TEMA_MUSIM:'Natal & Tahun Baru', KATEGORI_PRODUK:'kemasan kado dan kartu ucapan'}
+    },
+  ];
+}
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let prompts = [];
+let categories = [];
+let collections = [];
+
+let ui = {
+  theme:'light', view:'grid', nav:'all', search:'',
+  filterModel:'', filterCategory:'', filterStatus:'', sort:'latest',
+  page:1, pageSize:9, selectedId:null, detailTab:'prompt', detailOpen:false,
+};
+
+let modalState = { mode:'new', editId:null, selectedModels:[], selectedCategory:null, selectedCollections:[], selectedEmoji:'📄' };
+
+/* ================================================================
+   FIREBASE: INIT, AUTH, CLOUD SYNC
+   ================================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyA8oHwSwdSzcquyHcubU__bPHjP9bzKwec",
+  authDomain: "prompt-library-b1f90.firebaseapp.com",
+  projectId: "prompt-library-b1f90",
+  storageBucket: "prompt-library-b1f90.firebasestorage.app",
+  messagingSenderId: "704070382380",
+  appId: "1:704070382380:web:d8e4372be61b21f3703289",
+  measurementId: "G-B0WCQX9NFJ"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
+
+let currentUser = null;
+let unsubscribeSnapshot = null;
+
+function docRefForUser(uid){
+  return db.collection('promptLibraryUsers').doc(uid);
+}
+
+async function signInWithGoogle(){
+  const btn = document.getElementById('btnGoogleSignIn');
+  const statusEl = document.getElementById('authStatus');
+  btn.disabled = true;
+  statusEl.textContent = 'Menghubungkan ke Google...';
+  try{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+  }catch(e){
+    statusEl.textContent = 'Gagal masuk: ' + (e.message || 'coba lagi.');
+    btn.disabled = false;
+  }
+}
+function signOutUser(){
+  if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+  auth.signOut();
+}
+
+function attachRealtimeListener(uid){
+  const ref = docRefForUser(uid);
+  unsubscribeSnapshot = ref.onSnapshot((snap)=>{
+    if(snap.exists){
+      const data = snap.data();
+      prompts = data.prompts || [];
+      categories = data.categories || defaultCategories();
+      collections = data.collections || defaultCollections();
+    } else {
+      categories = defaultCategories();
+      collections = defaultCollections();
+      prompts = seedPrompts();
+      ref.set({prompts, categories, collections, updatedAt: Date.now()});
+    }
+    render();
+  }, (err)=>{
+    console.error('Firestore sync error', err);
+    toast('Gagal sinkronisasi data online.');
+  });
+}
+
+function saveData(){
+  if(!currentUser) return;
+  docRefForUser(currentUser.uid)
+    .set({prompts, categories, collections, updatedAt: Date.now()}, {merge:true})
+    .catch((e)=>{ console.error('Save error', e); toast('Gagal menyimpan ke cloud.'); });
+}
+
+function showAuthScreen(show){
+  document.getElementById('authScreen').style.display = show ? 'flex' : 'none';
+}
+function updateUserBadge(user){
+  const badge = document.getElementById('userBadge');
+  const logoutBtn = document.getElementById('btnLogout');
+  if(user){
+    badge.style.display='flex';
+    logoutBtn.style.display='flex';
+    logoutBtn.innerHTML = ICONS.close;
+    const photo = user.photoURL ? `<img src="${user.photoURL}" alt="">` : '';
+    badge.innerHTML = `${photo}<span>${esc(user.displayName || user.email || 'Pengguna')}</span>`;
+  } else {
+    badge.style.display='none';
+    logoutBtn.style.display='none';
+    badge.innerHTML='';
+  }
+}
+
+auth.onAuthStateChanged((user)=>{
+  currentUser = user;
+  updateUserBadge(user);
+  if(user){
+    const statusEl = document.getElementById('authStatus');
+    if(statusEl) statusEl.textContent = '';
+    const btn = document.getElementById('btnGoogleSignIn');
+    if(btn) btn.disabled = false;
+    showAuthScreen(false);
+    attachRealtimeListener(user.uid);
+  } else {
+    if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot=null; }
+    prompts = []; categories = []; collections = [];
+    showAuthScreen(true);
+  }
+});
+
+function loadTheme(){
+  const t = localStorage.getItem(THEME_KEY);
+  ui.theme = t === 'dark' ? 'dark' : 'light';
+  applyTheme();
+}
+function applyTheme(){
+  document.body.classList.toggle('dark', ui.theme==='dark');
+}
+function toggleTheme(){
+  ui.theme = ui.theme==='dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, ui.theme);
+  applyTheme();
+  const btn = document.getElementById('btnThemeToggle');
+  if(btn) btn.innerHTML = ui.theme==='dark'?ICONS.sun:ICONS.moon;
+}
+
+/* ================================================================
+   TOAST
+   ================================================================ */
+function toast(msg){
+  const root = document.getElementById('toastRoot');
+  const el = document.createElement('div');
+  el.className='toast';
+  el.textContent = msg;
+  root.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .25s'; el.style.opacity='0'; setTimeout(()=>el.remove(),250); }, 2200);
+}
+
+/* ================================================================
+   VARIABLES & STATS
+   ================================================================ */
+function detectVariables(text){
+  const re = /\{\{\s*([A-Za-z0-9_\-]+)\s*\}\}/g;
+  const found = []; let m;
+  while((m=re.exec(text||''))){
+    if(!found.includes(m[1])) found.push(m[1]);
+  }
+  return found;
+}
+function substituteVariables(text, values){
+  return (text||'').replace(/\{\{\s*([A-Za-z0-9_\-]+)\s*\}\}/g, (m,name)=> (values&&values[name]) ? values[name] : m);
+}
+function computeStats(text){
+  text = text||'';
+  const words = (text.trim().match(/\S+/g)||[]).length;
+  const chars = text.length;
+  const tokens = Math.max(1, Math.round(chars/4));
+  const vars = detectVariables(text).length;
+  let complexity = 'Sederhana', level=1;
+  const score = words + vars*8;
+  if(score>220){ complexity='Kompleks'; level=3; }
+  else if(score>90){ complexity='Menengah'; level=2; }
+  return {words,chars,tokens,vars,complexity,level};
+}
+function complexityColor(level){
+  return level===3?'#DC2626':level===2?'#D97706':'#16A34A';
+}
+function timeAgo(ts){
+  const diff = Date.now()-ts;
+  const dayMs = 86400000;
+  if(diff < 3600000) return Math.max(1,Math.round(diff/60000))+' menit lalu';
+  if(diff < dayMs) return Math.round(diff/3600000)+' jam lalu';
+  const d = Math.round(diff/dayMs);
+  if(d<30) return d+' hari lalu';
+  if(d<365) return Math.round(d/30)+' bulan lalu';
+  return Math.round(d/365)+' tahun lalu';
+}
+
+/* ================================================================
+   DATA LOOKUP HELPERS
+   ================================================================ */
+function getPromptById(id){ return prompts.find(p=>p.id===id); }
+function catOf(id){ return categories.find(c=>c.id===id); }
+function catColor(catId){
+  const idx = categories.findIndex(c=>c.id===catId);
+  return CAT_COLORS[(idx<0?0:idx) % CAT_COLORS.length];
+}
+function collectVarInputs(){
+  const vals = {};
+  document.querySelectorAll('[data-varname]').forEach(inp=>{ vals[inp.dataset.varname]=inp.value; });
+  return vals;
+}
+
+/* ================================================================
+   FILTER / SORT / SCOPE
+   ================================================================ */
+function getScopedPrompts(){
+  let list = prompts.slice();
+  if(ui.nav==='trash'){
+    list = list.filter(p=>p.deleted);
+  } else {
+    list = list.filter(p=>!p.deleted);
+    if(ui.nav==='favorites') list = list.filter(p=>p.favorite);
+    else if(ui.nav.startsWith('cat:')) list = list.filter(p=>p.categoryId===ui.nav.slice(4));
+    else if(ui.nav.startsWith('col:')) list = list.filter(p=>(p.collectionIds||[]).includes(ui.nav.slice(4)));
+  }
+  if(ui.search.trim()){
+    const q = ui.search.trim().toLowerCase();
+    list = list.filter(p=>
+      p.title.toLowerCase().includes(q) ||
+      (p.description||'').toLowerCase().includes(q) ||
+      (p.tags||[]).some(t=>t.toLowerCase().includes(q)) ||
+      (p.content||'').toLowerCase().includes(q)
+    );
+  }
+  if(ui.nav!=='trash'){
+    if(ui.filterModel) list = list.filter(p=>p.models.includes(ui.filterModel));
+    if(ui.filterCategory) list = list.filter(p=>p.categoryId===ui.filterCategory);
+    if(ui.filterStatus) list = list.filter(p=>p.status===ui.filterStatus);
+  }
+  switch(ui.sort){
+    case 'oldest': list.sort((a,b)=>a.createdAt-b.createdAt); break;
+    case 'az': list.sort((a,b)=>a.title.localeCompare(b.title)); break;
+    case 'favorite': list.sort((a,b)=>(b.favorite-a.favorite) || (b.updatedAt-a.updatedAt)); break;
+    default: list.sort((a,b)=>b.updatedAt-a.updatedAt);
+  }
+  return list;
+}
+function navLabel(){
+  if(ui.nav==='all') return 'Semua Prompt';
+  if(ui.nav==='favorites') return 'Favorit';
+  if(ui.nav==='trash') return 'Sampah';
+  if(ui.nav==='settings') return 'Pengaturan';
+  if(ui.nav.startsWith('cat:')){ const c=catOf(ui.nav.slice(4)); return c? c.name : 'Kategori'; }
+  if(ui.nav.startsWith('col:')){ const c=collections.find(x=>x.id===ui.nav.slice(4)); return c? c.name : 'Koleksi'; }
+  return 'Prompt';
+}
+
+/* ================================================================
+   RENDER: SIDEBAR
+   ================================================================ */
+function renderSidebar(){
+  const activeCount = prompts.filter(p=>!p.deleted).length;
+  const favCount = prompts.filter(p=>!p.deleted && p.favorite).length;
+  const trashCount = prompts.filter(p=>p.deleted).length;
+
+  document.getElementById('navSection').innerHTML = `
+    <button class="nav-item ${ui.nav==='all'?'active':''}" data-nav="all">${ICONS.all}<span>Semua Prompt</span><span class="nav-count">${activeCount}</span></button>
+    <button class="nav-item ${ui.nav==='favorites'?'active':''}" data-nav="favorites">${ICONS.star}<span>Favorit</span><span class="nav-count">${favCount}</span></button>
+  `;
+
+  document.getElementById('categoryList').innerHTML = categories.map(c=>{
+    const count = prompts.filter(p=>!p.deleted && p.categoryId===c.id).length;
+    return `<div class="cat-item-row">
+      <button class="cat-item ${ui.nav==='cat:'+c.id?'active':''}" data-nav="cat:${c.id}">
+        <span class="cat-emoji">${c.emoji}</span><span>${esc(c.name)}</span><span class="cat-count">${count}</span>
+      </button>
+      <button class="cat-del" data-del-cat="${c.id}" title="Hapus kategori">${ICONS.trash}</button>
+    </div>`;
+  }).join('') || `<div style="padding:8px 10px;font-size:12.5px;color:var(--text-secondary)">Belum ada kategori.</div>`;
+
+  document.getElementById('collectionList').innerHTML = collections.map(c=>{
+    const count = prompts.filter(p=>!p.deleted && (p.collectionIds||[]).includes(c.id)).length;
+    return `<div class="cat-item-row">
+      <button class="cat-item ${ui.nav==='col:'+c.id?'active':''}" data-nav="col:${c.id}">
+        <span class="cat-emoji">${ICONS.folder}</span><span>${esc(c.name)}</span><span class="cat-count">${count}</span>
+      </button>
+      <button class="cat-del" data-del-col="${c.id}" title="Hapus koleksi">${ICONS.trash}</button>
+    </div>`;
+  }).join('') || `<div style="padding:8px 10px;font-size:12.5px;color:var(--text-secondary)">Belum ada koleksi.</div>`;
+
+  const settingsBtn = document.querySelector('[data-nav="settings"]');
+  settingsBtn.innerHTML = `${ICONS.settings}<span>Pengaturan</span>`;
+  settingsBtn.classList.toggle('active', ui.nav==='settings');
+  const trashBtn = document.querySelector('[data-nav="trash"]');
+  trashBtn.innerHTML = `${ICONS.trash}<span>Sampah</span><span class="nav-count">${trashCount}</span>`;
+  trashBtn.classList.toggle('active', ui.nav==='trash');
+}
+
+function renderFilterOptions(){
+  const fm = document.getElementById('filterModel');
+  fm.innerHTML = `<option value="">Semua Model</option>` + MODELS.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  fm.value = ui.filterModel;
+
+  const fc = document.getElementById('filterCategory');
+  fc.innerHTML = `<option value="">Semua Kategori</option>` + categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  fc.value = ui.filterCategory;
+
+  document.getElementById('filterStatus').value = ui.filterStatus;
+  document.getElementById('filterSort').value = ui.sort;
+}
+
+/* ================================================================
+   RENDER: CARDS / ROWS / PAGINATION / CONTENT
+   ================================================================ */
+function renderModelPills(models){
+  return `<div class="model-tags">${(models||[]).map(mid=>{
+    const m = modelInfo(mid);
+    return `<span class="model-pill" style="background:${m.color}1A;color:${m.color}">${m.name}</span>`;
+  }).join('')}</div>`;
+}
+function renderModelPillsRaw(models){
+  return (models||[]).map(mid=>{ const m=modelInfo(mid); return `<span class="model-pill" style="background:${m.color}1A;color:${m.color}">${m.name}</span>`; }).join('');
+}
+function renderCard(p){
+  const c = catOf(p.categoryId);
+  const color = catColor(p.categoryId);
+  return `<div class="prompt-card" data-open="${p.id}">
+    <div class="prompt-thumb" style="background:${color}1A;color:${color}">
+      ${esc(p.emoji||(c?c.emoji:'📄'))}
+      <button class="prompt-fav-btn ${p.favorite?'active':''}" data-fav="${p.id}" title="Favorit">${p.favorite?ICONS.star:ICONS.starOutline}</button>
+    </div>
+    <div class="prompt-body">
+      <div class="prompt-title">${esc(p.title)}</div>
+      ${renderModelPills(p.models)}
+      <div class="prompt-desc">${esc(p.description||'')}</div>
+      ${p.tags && p.tags.length? `<div class="hashtags">${p.tags.slice(0,3).map(t=>`<span class="hashtag">#${esc(t)}</span>`).join('')}</div>` : ''}
+      <div class="prompt-footer">
+        <span class="edited">${timeAgo(p.updatedAt)}</span>
+        <div class="footer-actions">
+          ${ui.nav==='trash'
+            ? `<button data-restore="${p.id}" title="Pulihkan">${ICONS.restore}</button><button data-permadel="${p.id}" title="Hapus permanen">${ICONS.close}</button>`
+            : `<button data-copy="${p.id}" title="Salin">${ICONS.copy}</button><button data-edit="${p.id}" title="Edit">${ICONS.edit}</button><button data-del="${p.id}" title="Hapus">${ICONS.trash}</button>`
+          }
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderRow(p){
+  const c = catOf(p.categoryId);
+  const color = catColor(p.categoryId);
+  return `<div class="prompt-row" data-open="${p.id}">
+    <div class="prompt-thumb" style="background:${color}1A;color:${color}">${esc(p.emoji||(c?c.emoji:'📄'))}</div>
+    <div class="row-main">
+      <div class="row-title">${esc(p.title)}</div>
+      <div class="row-sub">${esc(p.description||'')}</div>
+    </div>
+    ${renderModelPills(p.models)}
+    <div class="row-right">
+      <span class="edited">${timeAgo(p.updatedAt)}</span>
+      <button class="icon-btn" data-fav="${p.id}" title="Favorit">${p.favorite?ICONS.star:ICONS.starOutline}</button>
+      ${ui.nav==='trash'
+        ? `<button class="icon-btn" data-restore="${p.id}" title="Pulihkan">${ICONS.restore}</button>`
+        : `<button class="icon-btn" data-copy="${p.id}" title="Salin">${ICONS.copy}</button>`
+      }
+    </div>
+  </div>`;
+}
+function renderPagination(totalPages){
+  const pag = document.getElementById('pagination');
+  if(totalPages<=1){ pag.innerHTML=''; return; }
+  let html = `<button data-page="${ui.page-1}" ${ui.page<=1?'disabled':''}>${ICONS.chevLeft}</button>`;
+  for(let i=1;i<=totalPages;i++){
+    if(totalPages>7 && i!==1 && i!==totalPages && Math.abs(i-ui.page)>1){
+      if(i===2 || i===totalPages-1) html += `<span style="padding:0 4px;color:var(--text-secondary)">…</span>`;
+      continue;
+    }
+    html += `<button data-page="${i}" class="${i===ui.page?'active':''}">${i}</button>`;
+  }
+  html += `<button data-page="${ui.page+1}" ${ui.page>=totalPages?'disabled':''}>${ICONS.chevRight}</button>`;
+  pag.innerHTML = html;
+}
+function renderSettingsPage(){
+  const u = currentUser;
+  return `
+  <div style="max-width:560px;display:flex;flex-direction:column;gap:20px;">
+    <div>
+      <div class="section-label">Akun</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${u && u.photoURL ? `<img src="${u.photoURL}" alt="" style="width:36px;height:36px;border-radius:50%;">` : ''}
+          <div>
+            <div style="font-weight:700;font-size:13.5px;">${esc(u ? (u.displayName || u.email || 'Pengguna') : '')}</div>
+            <div style="font-size:12px;color:var(--text-secondary)">${esc(u ? u.email || '' : '')}</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" id="btnLogoutSettings">Keluar</button>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Tampilan</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+        <div>
+          <div style="font-weight:700;font-size:13.5px;">Mode Gelap</div>
+          <div style="font-size:12px;color:var(--text-secondary)">Preferensi tema disimpan otomatis di perangkat ini.</div>
+        </div>
+        <button class="btn btn-secondary" id="btnThemeToggleSettings">${ui.theme==='dark'?'☀️ Terang':'🌙 Gelap'}</button>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Data</div>
+      <div style="display:flex;flex-direction:column;gap:10px;border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:12.5px;color:var(--text-secondary)">Total ${prompts.filter(p=>!p.deleted).length} prompt aktif, ${prompts.filter(p=>p.deleted).length} di sampah, ${categories.length} kategori, ${collections.length} koleksi. Data tersinkron otomatis secara online ke akun Google kamu, jadi bisa diakses dari perangkat lain.</div>
+        <div style="display:flex;gap:9px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="btnExportData">Ekspor JSON</button>
+          <button class="btn btn-danger" id="btnResetData">Reset ke Data Contoh</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderContent(){
+  const heading = document.getElementById('contentHeading');
+  const wrap = document.getElementById('promptListWrap');
+  const pag = document.getElementById('pagination');
+  const filterRow = document.querySelector('.filter-row');
+
+  if(ui.nav==='settings'){
+    filterRow.style.display='none';
+    heading.innerHTML = `<h2>Pengaturan</h2>`;
+    wrap.innerHTML = renderSettingsPage();
+    pag.innerHTML='';
+    return;
+  }
+  filterRow.style.display='flex';
+  const disableFilters = ui.nav==='trash';
+  ['filterModel','filterCategory','filterStatus'].forEach(id=>{ document.getElementById(id).disabled = disableFilters; });
+
+  const all = getScopedPrompts();
+  const total = all.length;
+  const totalPages = Math.max(1, Math.ceil(total/ui.pageSize));
+  if(ui.page>totalPages) ui.page = totalPages;
+  const start = (ui.page-1)*ui.pageSize;
+  const pageItems = all.slice(start, start+ui.pageSize);
+
+  heading.innerHTML = `<h2>${navLabel()}</h2><span>${total} prompt</span>`;
+
+  if(total===0){
+    wrap.innerHTML = `<div class="empty-state">${ICONS.search}<h3>Tidak ada prompt</h3><p>${ui.nav==='trash'?'Sampah kosong.':'Coba ubah kata kunci pencarian atau filter, atau buat prompt baru.'}</p></div>`;
+    pag.innerHTML='';
+    return;
+  }
+
+  if(ui.view==='grid'){
+    wrap.innerHTML = `<div class="prompt-grid">${pageItems.map(p=>renderCard(p)).join('')}</div>`;
+  } else {
+    wrap.innerHTML = `<div class="prompt-list">${pageItems.map(p=>renderRow(p)).join('')}</div>`;
+  }
+  renderPagination(totalPages);
+}
+function render(){
+  renderSidebar();
+  renderFilterOptions();
+  renderContent();
+}
+
+/* ================================================================
+   DETAIL PANEL
+   ================================================================ */
+function tabLabel(t){ return {prompt:'Prompt', preview:'Preview', versions:'Versi', notes:'Catatan'}[t]; }
+
+function openDetail(id){
+  ui.selectedId = id;
+  ui.detailTab = 'prompt';
+  ui.detailOpen = true;
+  renderDetail();
+  document.getElementById('detailOverlay').classList.add('show');
+  document.getElementById('detailPanel').classList.add('show');
+}
+function closeDetail(){
+  ui.detailOpen = false;
+  document.getElementById('detailOverlay').classList.remove('show');
+  document.getElementById('detailPanel').classList.remove('show');
+}
+function renderDetail(){
+  const p = getPromptById(ui.selectedId);
+  const panel = document.getElementById('detailPanel');
+  if(!p){ panel.innerHTML=''; return; }
+  const c = catOf(p.categoryId);
+
+  panel.innerHTML = `
+    <div class="detail-head">
+      <div class="detail-head-main">
+        <h3>${esc(p.title)}</h3>
+        <div class="model-tags">${renderModelPillsRaw(p.models)}${c?`<span class="hashtag" style="background:var(--bg-soft);color:var(--text-secondary)">${esc(c.name)}</span>`:''}</div>
+      </div>
+      <button class="icon-btn" data-fav="${p.id}" title="Favorit">${p.favorite?ICONS.star:ICONS.starOutline}</button>
+      <button class="icon-btn" id="btnCloseDetail" title="Tutup">${ICONS.close}</button>
+    </div>
+    <div class="detail-tabs">
+      ${['prompt','preview','versions','notes'].map(t=>`<button class="detail-tab ${ui.detailTab===t?'active':''}" data-tab="${t}">${tabLabel(t)}</button>`).join('')}
+    </div>
+    <div class="detail-scroll" id="detailScrollBody"></div>
+  `;
+  renderDetailTabBody();
+}
+function renderDetailTabBody(){
+  const p = getPromptById(ui.selectedId);
+  const body = document.getElementById('detailScrollBody');
+  if(!p || !body) return;
+  const stats = computeStats(p.content);
+  const vars = detectVariables(p.content);
+
+  if(ui.detailTab==='prompt'){
+    body.innerHTML = `
+      <div class="stat-mini-grid">
+        <div class="stat-mini"><div class="stat-mini-label">Kata</div><div class="stat-mini-value">${stats.words}</div></div>
+        <div class="stat-mini"><div class="stat-mini-label">Karakter</div><div class="stat-mini-value">${stats.chars}</div></div>
+        <div class="stat-mini"><div class="stat-mini-label">Estimasi Token</div><div class="stat-mini-value">${stats.tokens}</div></div>
+        <div class="stat-mini"><div class="stat-mini-label">Kompleksitas</div><div class="stat-mini-value">
+          <span class="complexity-badge" style="background:${complexityColor(stats.level)}1A;color:${complexityColor(stats.level)}">${stats.complexity}</span>
+        </div></div>
+      </div>
+      <div class="section-label">Isi Prompt</div>
+      <div class="editor-box">
+        <textarea class="editor-text" id="detailContentArea" style="min-height:180px;">${esc(p.content)}</textarea>
+      </div>
+      ${vars.length? `<div class="section-label">Variabel Terdeteksi (${vars.length})</div><div class="var-grid" id="detailVarGrid">${vars.map(v=>`
+        <div class="var-field"><label>${esc(v)}</label><input type="text" data-varname="${esc(v)}" value="${esc((p.variables&&p.variables[v])||'')}" placeholder="Nilai default..."></div>
+      `).join('')}</div>` : `<div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:16px;">Tidak ada variabel {{VARIABEL}} terdeteksi di prompt ini.</div>`}
+      <div class="detail-actions">
+        <button class="btn btn-primary btn-sm" id="btnDetailSave">Simpan Perubahan</button>
+        <button class="btn btn-secondary btn-sm" id="btnDetailCopy">${ICONS.copy} Salin (dengan variabel)</button>
+      </div>
+      <div class="section-label">Tag</div>
+      <div class="hashtags" style="margin-bottom:16px;">${(p.tags||[]).map(t=>`<span class="hashtag">#${esc(t)}</span>`).join('') || '<span style="font-size:12px;color:var(--text-secondary)">Belum ada tag.</span>'}</div>
+    `;
+  } else if(ui.detailTab==='preview'){
+    const filled = substituteVariables(p.content, p.variables||{});
+    body.innerHTML = `
+      <div class="section-label">Preview dengan Nilai Variabel</div>
+      <div class="editor-box"><div style="padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.7;">${esc(filled)}</div></div>
+      <div class="detail-actions">
+        <button class="btn btn-primary btn-sm" id="btnPreviewCopy">${ICONS.copy} Salin Hasil Preview</button>
+      </div>
+    `;
+  } else if(ui.detailTab==='versions'){
+    const versions = p.versions||[];
+    body.innerHTML = `
+      <div class="section-label">Riwayat Versi (${versions.length})</div>
+      ${versions.length===0? `<div style="font-size:12.5px;color:var(--text-secondary)">Belum ada versi tersimpan. Simpan perubahan pada tab Prompt untuk membuat versi baru.</div>` :
+      versions.slice().reverse().map(v=>`
+        <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-weight:700;font-size:12.5px;">${new Date(v.createdAt).toLocaleString('id-ID')}</span>
+            <button class="btn btn-ghost btn-sm" data-restore-version="${v.id}">Pulihkan</button>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:6px;">${esc(v.note||'')}</div>
+          <div style="font-size:12.5px;white-space:pre-wrap;max-height:100px;overflow:hidden;color:var(--text-secondary);">${esc(v.content)}</div>
+        </div>
+      `).join('')}
+    `;
+  } else if(ui.detailTab==='notes'){
+    body.innerHTML = `
+      <div class="section-label">Catatan Pribadi</div>
+      <div class="field"><textarea id="detailNotesArea" placeholder="Tulis catatan tentang prompt ini...">${esc(p.notes||'')}</textarea></div>
+      <div class="detail-actions"><button class="btn btn-primary btn-sm" id="btnSaveNotes">Simpan Catatan</button></div>
+    `;
+  }
+}
+function saveDetailPrompt(){
+  const p = getPromptById(ui.selectedId);
+  if(!p) return;
+  const newContent = document.getElementById('detailContentArea').value;
+  const newVars = {...(p.variables||{}), ...collectVarInputs()};
+
+  if(newContent !== p.content){
+    p.versions = p.versions || [];
+    p.versions.push({id:uid('v'), content:p.content, note:'Sebelum diedit '+new Date().toLocaleString('id-ID'), createdAt:Date.now()});
+  }
+  p.content = newContent;
+  p.variables = newVars;
+  p.updatedAt = Date.now();
+  saveData();
+  toast('Perubahan disimpan.');
+  renderDetailTabBody();
+  render();
+}
+function saveNotes(){
+  const p = getPromptById(ui.selectedId); if(!p) return;
+  p.notes = document.getElementById('detailNotesArea').value;
+  p.updatedAt = Date.now();
+  saveData(); toast('Catatan disimpan.'); render();
+}
+function restoreVersion(versionId){
+  const p = getPromptById(ui.selectedId); if(!p) return;
+  const v = (p.versions||[]).find(x=>x.id===versionId); if(!v) return;
+  p.versions.push({id:uid('v'), content:p.content, note:'Sebelum dipulihkan ke versi lama', createdAt:Date.now()});
+  p.content = v.content;
+  p.updatedAt = Date.now();
+  saveData(); toast('Versi dipulihkan.');
+  ui.detailTab='prompt'; renderDetail();
+  render();
+}
+
+/* ================================================================
+   COPY / CLIPBOARD
+   ================================================================ */
+async function copyText(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    toast('Berhasil disalin ke clipboard.');
+  }catch(e){
+    try{
+      const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+      toast('Berhasil disalin ke clipboard.');
+    }catch(e2){ toast('Gagal menyalin.'); }
+  }
+}
+function copyPromptFilled(id){
+  const p = getPromptById(id); if(!p) return;
+  copyText(substituteVariables(p.content, p.variables||{}));
+}
+
+/* ================================================================
+   FAVORITE / DELETE / RESTORE
+   ================================================================ */
+function toggleFavorite(id){
+  const p = getPromptById(id); if(!p) return;
+  p.favorite = !p.favorite; p.updatedAt = Date.now();
+  saveData(); render();
+  if(ui.detailOpen && ui.selectedId===id) renderDetail();
+}
+function softDelete(id){
+  const p = getPromptById(id); if(!p) return;
+  p.deleted = true; p.deletedAt = Date.now();
+  saveData();
+  if(ui.selectedId===id) closeDetail();
+  render();
+  toast('Prompt dipindahkan ke sampah.');
+}
+function restorePrompt(id){
+  const p = getPromptById(id); if(!p) return;
+  p.deleted = false; delete p.deletedAt;
+  saveData(); render();
+  toast('Prompt dipulihkan.');
+}
+function permanentDelete(id){
+  if(!confirm('Hapus permanen prompt ini? Tindakan ini tidak bisa dibatalkan.')) return;
+  prompts = prompts.filter(p=>p.id!==id);
+  saveData(); render();
+  toast('Prompt dihapus permanen.');
+}
+
+/* ================================================================
+   MODAL: NEW / EDIT PROMPT
+   ================================================================ */
+function openModal(mode, id){
+  modalState.mode = mode;
+  modalState.editId = id || null;
+  const p = id ? getPromptById(id) : null;
+  modalState.selectedModels = p ? [...p.models] : [];
+  modalState.selectedCategory = p ? p.categoryId : (categories[0]? categories[0].id : null);
+  modalState.selectedCollections = p ? [...(p.collectionIds||[])] : [];
+  modalState.selectedEmoji = p ? (p.emoji || '📄') : '📄';
+  renderModal(p);
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+function renderModal(p){
+  const box = document.getElementById('modalBox');
+  box.innerHTML = `
+    <div class="modal-head">
+      <h3>${modalState.mode==='edit'?'Edit Prompt':'Prompt Baru'}</h3>
+      <button class="icon-btn" id="btnModalClose">${ICONS.close}</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Judul</label><input type="text" id="mTitle" value="${p?esc(p.title):''}" placeholder="Judul prompt..."></div>
+      <div class="field"><label>Deskripsi Singkat</label><input type="text" id="mDesc" value="${p?esc(p.description||''):''}" placeholder="Deskripsi singkat..."></div>
+      <div class="field"><label>Isi Prompt</label><textarea id="mContent" placeholder="Tulis isi prompt, gunakan {{VARIABEL}} untuk bagian yang bisa diganti...">${p?esc(p.content):''}</textarea></div>
+      <div class="field"><label>Tag (pisahkan dengan koma)</label><input type="text" id="mTags" value="${p?esc((p.tags||[]).join(', ')):''}" placeholder="misal: copywriting, ai-image"></div>
+      <div class="field">
+        <label>Model AI</label>
+        <div class="chip-group" id="mModelChips">
+          ${MODELS.map(m=>`<button type="button" class="chip ${modalState.selectedModels.includes(m.id)?'active':''}" data-chip-model="${m.id}">${m.name}</button>`).join('')}
+        </div>
+      </div>
+      <div class="field">
+        <label>Kategori</label>
+        <select id="mCategory">
+          ${categories.map(c=>`<option value="${c.id}" ${modalState.selectedCategory===c.id?'selected':''}>${c.emoji} ${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Koleksi</label>
+        <div class="chip-group" id="mColChips">
+          ${collections.map(c=>`<button type="button" class="chip ${modalState.selectedCollections.includes(c.id)?'active':''}" data-chip-col="${c.id}">${esc(c.name)}</button>`).join('') || '<span style="font-size:12px;color:var(--text-secondary)">Belum ada koleksi.</span>'}
+        </div>
+      </div>
+      <div class="field">
+        <label>Ikon</label>
+        <div class="emoji-grid" id="mEmojiGrid">
+          ${EMOJI_OPTIONS.map(e=>`<button type="button" class="emoji-opt ${modalState.selectedEmoji===e?'active':''}" data-emoji="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="mStatus">
+          ${['Draft','Published','Archived'].map(s=>`<option value="${s}" ${p? (p.status===s?'selected':'') : (s==='Draft'?'selected':'')}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" id="btnModalCancel">Batal</button>
+      <button class="btn btn-primary" id="btnModalSave">${modalState.mode==='edit'?'Simpan Perubahan':'Buat Prompt'}</button>
+    </div>
+  `;
+}
+function saveModal(){
+  const title = document.getElementById('mTitle').value.trim();
+  if(!title){ toast('Judul wajib diisi.'); return; }
+  const content = document.getElementById('mContent').value;
+  const description = document.getElementById('mDesc').value.trim();
+  const tags = document.getElementById('mTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const categoryId = document.getElementById('mCategory').value;
+  const status = document.getElementById('mStatus').value;
+
+  if(modalState.mode==='edit' && modalState.editId){
+    const p = getPromptById(modalState.editId);
+    if(p.content !== content){
+      p.versions = p.versions||[];
+      p.versions.push({id:uid('v'), content:p.content, note:'Sebelum diedit lewat form', createdAt:Date.now()});
+    }
+    p.title=title; p.description=description; p.content=content; p.tags=tags;
+    p.categoryId=categoryId; p.status=status; p.models=[...modalState.selectedModels];
+    p.collectionIds=[...modalState.selectedCollections]; p.emoji=modalState.selectedEmoji;
+    p.updatedAt = Date.now();
+    toast('Prompt diperbarui.');
+  } else {
+    const now = Date.now();
+    prompts.unshift({
+      id:uid('p'), title, description, content, models:[...modalState.selectedModels],
+      categoryId, collectionIds:[...modalState.selectedCollections], tags, status,
+      favorite:false, deleted:false, createdAt:now, updatedAt:now, versions:[], notes:'',
+      emoji:modalState.selectedEmoji, variables:{}
+    });
+    toast('Prompt baru dibuat.');
+  }
+  saveData();
+  closeModal();
+  render();
+}
+
+/* ================================================================
+   CATEGORY / COLLECTION MANAGEMENT
+   ================================================================ */
+function addCategory(){
+  const name = window.prompt('Nama kategori baru:');
+  if(!name || !name.trim()) return;
+  categories.push({id:uid('cat'), name:name.trim(), emoji: EMOJI_OPTIONS[categories.length % EMOJI_OPTIONS.length]});
+  saveData(); render();
+  toast('Kategori ditambahkan.');
+}
+function deleteCategory(id){
+  if(!confirm('Hapus kategori ini? Prompt di dalamnya tidak akan terhapus, tapi jadi tanpa kategori.')) return;
+  categories = categories.filter(c=>c.id!==id);
+  prompts.forEach(p=>{ if(p.categoryId===id) p.categoryId=null; });
+  if(ui.nav==='cat:'+id) ui.nav='all';
+  saveData(); render();
+  toast('Kategori dihapus.');
+}
+function addCollection(){
+  const name = window.prompt('Nama koleksi baru:');
+  if(!name || !name.trim()) return;
+  collections.push({id:uid('col'), name:name.trim()});
+  saveData(); render();
+  toast('Koleksi ditambahkan.');
+}
+function deleteCollection(id){
+  if(!confirm('Hapus koleksi ini?')) return;
+  collections = collections.filter(c=>c.id!==id);
+  prompts.forEach(p=>{ p.collectionIds = (p.collectionIds||[]).filter(cid=>cid!==id); });
+  if(ui.nav==='col:'+id) ui.nav='all';
+  saveData(); render();
+  toast('Koleksi dihapus.');
+}
+
+/* ================================================================
+   SETTINGS PAGE ACTIONS
+   ================================================================ */
+function exportData(){
+  const blob = new Blob([JSON.stringify({prompts,categories,collections}, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'prompt-library-data.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('Data diekspor.');
+}
+function resetData(){
+  if(!confirm('Reset semua data ke contoh awal? Data saat ini akan hilang.')) return;
+  categories = defaultCategories();
+  collections = defaultCollections();
+  prompts = seedPrompts();
+  saveData();
+  ui.nav='all'; ui.page=1;
+  render();
+  toast('Data direset ke contoh awal.');
+}
+
+/* ================================================================
+   EVENTS
+   ================================================================ */
+function setupEvents(){
+  document.getElementById('btnCollapseSidebar').innerHTML = ICONS.collapse;
+  document.getElementById('btnExpandSidebar').innerHTML = ICONS.menu;
+  document.getElementById('btnHamburger').innerHTML = ICONS.menu;
+  document.getElementById('btnThemeToggle').innerHTML = ui.theme==='dark'?ICONS.sun:ICONS.moon;
+  document.getElementById('btnNewPrompt').innerHTML = `${ICONS.plus}<span>Prompt Baru</span>`;
+  document.getElementById('btnViewGrid').innerHTML = ICONS.grid;
+  document.getElementById('btnViewList').innerHTML = ICONS.list;
+  document.getElementById('btnAddCategory').innerHTML = ICONS.plus;
+  document.getElementById('btnAddCollection').innerHTML = ICONS.plus;
+  document.getElementById('btnViewGrid').classList.toggle('active', ui.view==='grid');
+  document.getElementById('btnViewList').classList.toggle('active', ui.view==='list');
+
+  document.getElementById('btnCollapseSidebar').addEventListener('click', ()=>{
+    document.getElementById('sidebar').classList.add('collapsed');
+    document.getElementById('btnExpandSidebar').style.display='flex';
+  });
+  document.getElementById('btnExpandSidebar').addEventListener('click', ()=>{
+    document.getElementById('sidebar').classList.remove('collapsed');
+    document.getElementById('btnExpandSidebar').style.display='none';
+  });
+
+  document.getElementById('btnHamburger').addEventListener('click', ()=>{
+    document.getElementById('sidebar').classList.add('mobile-open');
+    document.getElementById('mobileBackdrop').classList.add('show');
+  });
+  document.getElementById('mobileBackdrop').addEventListener('click', ()=>{
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('mobileBackdrop').classList.remove('show');
+  });
+
+  document.getElementById('btnThemeToggle').addEventListener('click', toggleTheme);
+  document.getElementById('btnNewPrompt').addEventListener('click', ()=>openModal('new'));
+
+  const searchInput = document.getElementById('searchInput');
+  searchInput.addEventListener('input', (e)=>{ ui.search = e.target.value; ui.page=1; renderContent(); });
+  document.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); searchInput.focus(); }
+    if(e.key==='Escape'){
+      if(document.getElementById('modalOverlay').classList.contains('show')) closeModal();
+      else if(ui.detailOpen) closeDetail();
+    }
+  });
+
+  document.getElementById('filterModel').addEventListener('change', e=>{ ui.filterModel=e.target.value; ui.page=1; renderContent(); });
+  document.getElementById('filterCategory').addEventListener('change', e=>{ ui.filterCategory=e.target.value; ui.page=1; renderContent(); });
+  document.getElementById('filterStatus').addEventListener('change', e=>{ ui.filterStatus=e.target.value; ui.page=1; renderContent(); });
+  document.getElementById('filterSort').addEventListener('change', e=>{ ui.sort=e.target.value; ui.page=1; renderContent(); });
+
+  document.getElementById('btnViewGrid').addEventListener('click', ()=>{ ui.view='grid'; ui.page=1; render(); });
+  document.getElementById('btnViewList').addEventListener('click', ()=>{ ui.view='list'; ui.page=1; render(); });
+
+  document.getElementById('btnAddCategory').addEventListener('click', addCategory);
+  document.getElementById('btnAddCollection').addEventListener('click', addCollection);
+
+  document.getElementById('sidebar').addEventListener('click', (e)=>{
+    const navBtn = e.target.closest('[data-nav]');
+    if(navBtn){
+      ui.nav = navBtn.dataset.nav; ui.page=1;
+      document.getElementById('sidebar').classList.remove('mobile-open');
+      document.getElementById('mobileBackdrop').classList.remove('show');
+      render();
+      return;
+    }
+    const delCat = e.target.closest('[data-del-cat]');
+    if(delCat){ deleteCategory(delCat.dataset.delCat); return; }
+    const delCol = e.target.closest('[data-del-col]');
+    if(delCol){ deleteCollection(delCol.dataset.delCol); return; }
+  });
+
+  document.getElementById('promptListWrap').addEventListener('click', (e)=>{
+    const favBtn = e.target.closest('[data-fav]');
+    if(favBtn){ e.stopPropagation(); toggleFavorite(favBtn.dataset.fav); return; }
+    const copyBtn = e.target.closest('[data-copy]');
+    if(copyBtn){ e.stopPropagation(); copyPromptFilled(copyBtn.dataset.copy); return; }
+    const editBtn = e.target.closest('[data-edit]');
+    if(editBtn){ e.stopPropagation(); openModal('edit', editBtn.dataset.edit); return; }
+    const delBtn = e.target.closest('[data-del]');
+    if(delBtn){ e.stopPropagation(); softDelete(delBtn.dataset.del); return; }
+    const restoreBtn = e.target.closest('[data-restore]');
+    if(restoreBtn){ e.stopPropagation(); restorePrompt(restoreBtn.dataset.restore); return; }
+    const permaBtn = e.target.closest('[data-permadel]');
+    if(permaBtn){ e.stopPropagation(); permanentDelete(permaBtn.dataset.permadel); return; }
+    const openCard = e.target.closest('[data-open]');
+    if(openCard){ openDetail(openCard.dataset.open); return; }
+  });
+  document.getElementById('pagination').addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-page]');
+    if(btn && !btn.disabled){ ui.page = parseInt(btn.dataset.page,10); renderContent(); }
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(e.target.id==='btnThemeToggleSettings'){ toggleTheme(); renderContent(); }
+    if(e.target.id==='btnLogoutSettings'){ signOutUser(); }
+    if(e.target.id==='btnExportData'){ exportData(); }
+    if(e.target.id==='btnResetData'){ resetData(); }
+  });
+
+  document.getElementById('detailOverlay').addEventListener('click', closeDetail);
+  document.getElementById('detailPanel').addEventListener('click', (e)=>{
+    if(e.target.closest('#btnCloseDetail')){ closeDetail(); return; }
+    const favBtn = e.target.closest('[data-fav]');
+    if(favBtn){ toggleFavorite(favBtn.dataset.fav); return; }
+    const tabBtn = e.target.closest('[data-tab]');
+    if(tabBtn){ ui.detailTab = tabBtn.dataset.tab; renderDetail(); return; }
+    if(e.target.closest('#btnDetailSave')){ saveDetailPrompt(); return; }
+    if(e.target.closest('#btnDetailCopy')){
+      const val = document.getElementById('detailContentArea').value;
+      copyText(substituteVariables(val, collectVarInputs()));
+      return;
+    }
+    if(e.target.closest('#btnPreviewCopy')){
+      const p = getPromptById(ui.selectedId);
+      copyText(substituteVariables(p.content, p.variables||{}));
+      return;
+    }
+    if(e.target.closest('#btnSaveNotes')){ saveNotes(); return; }
+    const restoreVerBtn = e.target.closest('[data-restore-version]');
+    if(restoreVerBtn){ restoreVersion(restoreVerBtn.dataset.restoreVersion); return; }
+  });
+
+  document.getElementById('modalOverlay').addEventListener('click', (e)=>{
+    if(e.target.id==='modalOverlay'){ closeModal(); return; }
+    if(e.target.closest('#btnModalClose') || e.target.closest('#btnModalCancel')){ closeModal(); return; }
+    if(e.target.closest('#btnModalSave')){ saveModal(); return; }
+    const chipModel = e.target.closest('[data-chip-model]');
+    if(chipModel){
+      const id = chipModel.dataset.chipModel;
+      const idx = modalState.selectedModels.indexOf(id);
+      if(idx>-1) modalState.selectedModels.splice(idx,1); else modalState.selectedModels.push(id);
+      chipModel.classList.toggle('active');
+      return;
+    }
+    const chipCol = e.target.closest('[data-chip-col]');
+    if(chipCol){
+      const id = chipCol.dataset.chipCol;
+      const idx = modalState.selectedCollections.indexOf(id);
+      if(idx>-1) modalState.selectedCollections.splice(idx,1); else modalState.selectedCollections.push(id);
+      chipCol.classList.toggle('active');
+      return;
+    }
+    const emojiBtn = e.target.closest('[data-emoji]');
+    if(emojiBtn){
+      modalState.selectedEmoji = emojiBtn.dataset.emoji;
+      document.querySelectorAll('#mEmojiGrid .emoji-opt').forEach(b=>b.classList.remove('active'));
+      emojiBtn.classList.add('active');
+      return;
+    }
+  });
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+function init(){
+  loadTheme();
+  setupEvents();
+  document.getElementById('btnGoogleSignIn').addEventListener('click', signInWithGoogle);
+  document.getElementById('btnLogout').addEventListener('click', signOutUser);
+}
+init();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
